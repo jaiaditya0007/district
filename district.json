@@ -265,25 +265,25 @@
     "time": "10:30 PM",
     "audi": "VIMAL 70MM",
     "theatre": "Vimal 70MM",
-    "total": 53,
+    "total": 44,
     "categories": {
       "EXECUTIVE": {
-        "available": 3,
+        "available": 1,
         "total": 144,
         "price": 50
       },
       "SILVER": {
-        "available": 5,
+        "available": 7,
         "total": 173,
         "price": 125
       },
       "GOLD": {
-        "available": 40,
+        "available": 36,
         "total": 502,
         "price": 175
       },
       "PLATINUM(RECLINERS)": {
-        "available": 5,
+        "available": 0,
         "total": 26,
         "price": 235
       }
