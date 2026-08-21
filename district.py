@@ -15,12 +15,9 @@ MOVIE_TITLE = "Irumudi"
 THEATRE_NAME = "Vimal 70MM"
 
 STATE_FILE = "district.json"
-NTFY_TOPIC = "alusdolby"
+NTFY_TOPIC = "district"
 CHECK_INTERVAL_SECONDS = 15
-
-# FIX: was 5h55m against a 6h (360 min) job timeout, leaving only ~5 min for
-# checkout + pip install + graceful shutdown. Trimmed to 5h30m for a real buffer.
-MAX_RUNTIME_SECONDS = (5 * 3600) + (30 * 60)  # 5 hours 30 minutes
+MAX_RUNTIME_SECONDS = (5 * 3600) + (55 * 60)  # 5 hours 55 minutes
 
 IST_OFFSET = timedelta(hours=5, minutes=30)
 
@@ -117,84 +114,58 @@ def format_show_time_ist(raw_time):
 
 def build_direct_booking_url(session, target_date):
     enc_sid = session.get("encSessionId")
-    fid = session.get("fid")
+    fid = session.get("fid", "b0meltruw2").lower()
     cid = TARGET_CONTENT_ID
-
-    if enc_sid and fid:
+    if enc_sid:
         return (
-            f"https://www.district.in/movies/seat-layout/{fid.lower()}?"
+            f"https://www.district.in/movies/seat-layout/{fid}?"
             f"encsessionid={enc_sid}&fromdate={target_date}&freeseating=false"
             f"&fromsessions=true&type=CINEMAS&contentid={cid}"
         )
-
-    # FIX: previously fell back to a hardcoded placeholder slug ("b0meltruw2")
-    # copied from one observed session, which could silently produce a wrong
-    # booking link. Instead, warn loudly and fall back to the theatre page,
-    # which is still a working (if less direct) link.
-    print(f"    -> [WARN] Missing 'encSessionId' or 'fid' in session payload "
-          f"(keys seen: {sorted(session.keys())}). Falling back to theatre page.")
     return f"https://www.district.in/movies/theatre-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
 
-def fetch_sessions_for_date(target_date, retries=2):
+def fetch_sessions_for_date(target_date):
     """Extracts all Irumudi sessions for a specific date from District SSR payload."""
     url = f"https://www.district.in/movies/theatre-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
-
-    for attempt in range(retries + 1):
-        try:
-            resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome", timeout=15)
-            if resp.status_code != 200:
-                print(f"    -> [{target_date}] HTTP Error: {resp.status_code} (attempt {attempt+1}/{retries+1})")
-                if attempt < retries:
-                    time.sleep(2)
-                    continue
-                return []
-
-            soup = BeautifulSoup(resp.text, "html.parser")
-            script_tag = soup.find("script", id="__NEXT_DATA__")
-            if not script_tag:
-                return []
-
-            data = json.loads(script_tag.string)
-            movies_state = data.get("props", {}).get("pageProps", {}).get("initialState", {}).get("movies", {})
-            cinema_sessions = movies_state.get("cinemaSessions", {})
-
-            irumudi_sessions = []
-            for date_key, cinema_data in cinema_sessions.items():
-                theatre_label = cinema_data.get("cinemaName") or THEATRE_NAME
-                for m in cinema_data.get("arrangedSessions", []):
-                    code = m.get("contentId") or m.get("entityCode")
-                    name = str(m.get("entityName") or m.get("label") or "").lower()
-
-                    if code == TARGET_CONTENT_ID or str(code) == str(TARGET_CONTENT_ID) or "irumudi" in name:
-                        for s in m.get("sessions", []):
-                            s["theatreName"] = theatre_label
-                            s["targetDate"] = target_date
-                            irumudi_sessions.append(s)
-
-            # FIX: guard against sessions with a missing/empty sid, which would
-            # otherwise collide under a shared `None` key in state.
-            unique = {}
-            skipped = 0
-            for s in irumudi_sessions:
-                sid = s.get("sid")
-                if not sid:
-                    skipped += 1
-                    continue
-                if sid not in unique:
-                    unique[sid] = s
-            if skipped:
-                print(f"    -> [{target_date}] Skipped {skipped} session(s) with no sid.")
-
-            return sorted(unique.values(), key=lambda x: x.get("showTime", ""))
-
-        except Exception as e:
-            print(f"    -> [{target_date}] Extraction error (attempt {attempt+1}/{retries+1}): {e}")
-            if attempt < retries:
-                time.sleep(2)
-                continue
+    try:
+        resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome", timeout=15)
+        if resp.status_code != 200:
+            print(f"    -> [{target_date}] HTTP Error: {resp.status_code}")
             return []
 
-    return []
+        soup = BeautifulSoup(resp.text, "html.parser")
+        script_tag = soup.find("script", id="__NEXT_DATA__")
+        if not script_tag:
+            return []
+
+        data = json.loads(script_tag.string)
+        movies_state = data.get("props", {}).get("pageProps", {}).get("initialState", {}).get("movies", {})
+        cinema_sessions = movies_state.get("cinemaSessions", {})
+
+        irumudi_sessions = []
+        for date_key, cinema_data in cinema_sessions.items():
+            theatre_label = cinema_data.get("cinemaName") or THEATRE_NAME
+            for m in cinema_data.get("arrangedSessions", []):
+                code = m.get("contentId") or m.get("entityCode")
+                name = str(m.get("entityName") or m.get("label") or "").lower()
+
+                if code == TARGET_CONTENT_ID or str(code) == str(TARGET_CONTENT_ID) or "irumudi" in name:
+                    for s in m.get("sessions", []):
+                        s["theatreName"] = theatre_label
+                        s["targetDate"] = target_date
+                        irumudi_sessions.append(s)
+
+        # Deduplicate by sid
+        unique = {}
+        for s in irumudi_sessions:
+            sid = s.get("sid")
+            if sid and sid not in unique:
+                unique[sid] = s
+
+        return sorted(unique.values(), key=lambda x: x.get("showTime", ""))
+    except Exception as e:
+        print(f"    -> [{target_date}] Extraction error: {e}")
+        return []
 
 def main():
     start_time = time.time()
@@ -345,7 +316,7 @@ def main():
         cycle_count += 1
         time.sleep(CHECK_INTERVAL_SECONDS)
 
-    print("\nTime limit reached (5h 30m). Gracefully shutting down.")
+    print("\nTime limit reached (5h 55m). Gracefully shutting down.")
 
 if __name__ == "__main__":
     main()
