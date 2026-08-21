@@ -15,7 +15,7 @@ MOVIE_TITLE = "Irumudi"
 THEATRE_NAME = "Vimal 70MM"
 
 STATE_FILE = "district.json"
-NTFY_TOPIC = "alusdolby"
+NTFY_TOPIC = "district"
 CHECK_INTERVAL_SECONDS = 15
 MAX_RUNTIME_SECONDS = (5 * 3600) + (55 * 60)  # 5 hours 55 minutes
 
