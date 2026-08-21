@@ -21,22 +21,25 @@ MAX_RUNTIME_SECONDS = (5 * 3600) + (55 * 60)  # 5 hours 55 minutes
 
 IST_OFFSET = timedelta(hours=5, minutes=30)
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+# Minimal clean headers - let curl_cffi construct authentic TLS/HTTP2 frames natively
+MINIMAL_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Platform": '"Windows"',
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Upgrade-Insecure-Requests": "1",
-    "Cache-Control": "max-age=0",
-    "Priority": "u=0, i"
+    "Referer": "https://www.district.in/",
 }
+
+# Persistent session to retain Cloudflare cookies across polling cycles
+CFFI_SESSION = None
+
+def get_session(impersonate_target="chrome124"):
+    global CFFI_SESSION
+    if CFFI_SESSION is None:
+        CFFI_SESSION = cffi_requests.Session(impersonate=impersonate_target)
+    return CFFI_SESSION
+
+def reset_session():
+    global CFFI_SESSION
+    CFFI_SESSION = None
 
 def quiet_git_pull():
     subprocess.run(["git", "fetch", "origin", "main"], capture_output=True, check=False)
@@ -89,7 +92,7 @@ def save_state(deltas, commit_msg="Update District target show state"):
             print("[GIT] Merged state is identical to remote. Nothing to push.")
             return latest_state
 
-    print("[GIT] Failed to push state after 3 attempts.")
+    print("[GIT] Failed to push after 3 attempts.")
     return latest_state
 
 def trigger_ntfy(title_ascii, message, click_url):
@@ -131,51 +134,63 @@ def build_direct_booking_url(session, target_date):
             f"encsessionid={enc_sid}&fromdate={target_date}&freeseating=false"
             f"&fromsessions=true&type=CINEMAS&contentid={cid}"
         )
-    return f"https://www.district.in/movies/theatre-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
+    return f"https://www.district.in/movies/vimal-cinema-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
 
 def fetch_sessions_for_date(target_date):
     """Extracts all Irumudi sessions for a specific date from District SSR payload."""
-    url = f"https://www.district.in/movies/theatre-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
-    try:
-        session = cffi_requests.Session(impersonate="chrome120")
-        resp = session.get(url, headers=HEADERS, timeout=15)
-        if resp.status_code != 200:
-            print(f"    -> [{target_date}] HTTP Error: {resp.status_code}")
-            return []
+    url = f"https://www.district.in/movies/vimal-cinema-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
+    
+    # Try with primary impersonation, rotate if Cloudflare triggers 403
+    for browser in ["chrome124", "chrome119", "safari17_0", "edge101"]:
+        try:
+            sess = get_session(browser)
+            resp = sess.get(url, headers=MINIMAL_HEADERS, timeout=15)
+            
+            if resp.status_code == 403:
+                reset_session()
+                continue
 
-        soup = BeautifulSoup(resp.text, "html.parser")
-        script_tag = soup.find("script", id="__NEXT_DATA__")
-        if not script_tag:
-            return []
+            if resp.status_code != 200:
+                print(f"    -> [{target_date}] HTTP Error: {resp.status_code}")
+                return []
 
-        data = json.loads(script_tag.string)
-        movies_state = data.get("props", {}).get("pageProps", {}).get("initialState", {}).get("movies", {})
-        cinema_sessions = movies_state.get("cinemaSessions", {})
+            soup = BeautifulSoup(resp.text, "html.parser")
+            script_tag = soup.find("script", id="__NEXT_DATA__")
+            if not script_tag:
+                return []
 
-        irumudi_sessions = []
-        for date_key, cinema_data in cinema_sessions.items():
-            theatre_label = cinema_data.get("cinemaName") or THEATRE_NAME
-            for m in cinema_data.get("arrangedSessions", []):
-                code = m.get("contentId") or m.get("entityCode")
-                name = str(m.get("entityName") or m.get("label") or "").lower()
+            data = json.loads(script_tag.string)
+            movies_state = data.get("props", {}).get("pageProps", {}).get("initialState", {}).get("movies", {})
+            cinema_sessions = movies_state.get("cinemaSessions", {})
 
-                if code == TARGET_CONTENT_ID or str(code) == str(TARGET_CONTENT_ID) or "irumudi" in name:
-                    for s in m.get("sessions", []):
-                        s["theatreName"] = theatre_label
-                        s["targetDate"] = target_date
-                        irumudi_sessions.append(s)
+            irumudi_sessions = []
+            for date_key, cinema_data in cinema_sessions.items():
+                theatre_label = cinema_data.get("cinemaName") or THEATRE_NAME
+                for m in cinema_data.get("arrangedSessions", []):
+                    code = m.get("contentId") or m.get("entityCode")
+                    name = str(m.get("entityName") or m.get("label") or "").lower()
 
-        # Deduplicate
-        unique = {}
-        for s in irumudi_sessions:
-            sid = s.get("sid")
-            if sid and sid not in unique:
-                unique[sid] = s
+                    if code == TARGET_CONTENT_ID or str(code) == str(TARGET_CONTENT_ID) or "irumudi" in name:
+                        for s in m.get("sessions", []):
+                            s["theatreName"] = theatre_label
+                            s["targetDate"] = target_date
+                            irumudi_sessions.append(s)
 
-        return sorted(unique.values(), key=lambda x: x.get("showTime", ""))
-    except Exception as e:
-        print(f"    -> [{target_date}] Extraction error: {e}")
-        return []
+            # Deduplicate by sid
+            unique = {}
+            for s in irumudi_sessions:
+                sid = s.get("sid")
+                if sid and sid not in unique:
+                    unique[sid] = s
+
+            return sorted(unique.values(), key=lambda x: x.get("showTime", ""))
+
+        except Exception as e:
+            reset_session()
+            continue
+
+    print(f"    -> [{target_date}] Failed after trying all browser profiles.")
+    return []
 
 def main():
     start_time = time.time()
