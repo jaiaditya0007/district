@@ -15,18 +15,27 @@ MOVIE_TITLE = "Irumudi"
 THEATRE_NAME = "Vimal 70MM"
 
 STATE_FILE = "district.json"
-NTFY_TOPIC = "district"
+NTFY_TOPIC = "alusdolby"
 CHECK_INTERVAL_SECONDS = 15
 MAX_RUNTIME_SECONDS = (5 * 3600) + (55 * 60)  # 5 hours 55 minutes
 
 IST_OFFSET = timedelta(hours=5, minutes=30)
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Accept-Language": "en-US,en;q=0.9",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache"
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "max-age=0",
+    "Priority": "u=0, i"
 }
 
 def quiet_git_pull():
@@ -77,7 +86,7 @@ def save_state(deltas, commit_msg="Update District target show state"):
                 print(f"[GIT] Push attempt {attempt+1} failed. Retrying merge...")
                 time.sleep(2)
         else:
-            print("[GIT] Merged state is identical. Nothing to push.")
+            print("[GIT] Merged state is identical to remote. Nothing to push.")
             return latest_state
 
     print("[GIT] Failed to push state after 3 attempts.")
@@ -128,7 +137,8 @@ def fetch_sessions_for_date(target_date):
     """Extracts all Irumudi sessions for a specific date from District SSR payload."""
     url = f"https://www.district.in/movies/theatre-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
     try:
-        resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome", timeout=15)
+        session = cffi_requests.Session(impersonate="chrome120")
+        resp = session.get(url, headers=HEADERS, timeout=15)
         if resp.status_code != 200:
             print(f"    -> [{target_date}] HTTP Error: {resp.status_code}")
             return []
@@ -155,7 +165,7 @@ def fetch_sessions_for_date(target_date):
                         s["targetDate"] = target_date
                         irumudi_sessions.append(s)
 
-        # Deduplicate by sid
+        # Deduplicate
         unique = {}
         for s in irumudi_sessions:
             sid = s.get("sid")
@@ -171,10 +181,10 @@ def main():
     start_time = time.time()
 
     print("==================================================")
-    print(f" DISTRICT SEAT MONITOR: {MOVIE_TITLE}")
-    print(f" Cinema: {THEATRE_NAME}")
-    print(f" Dates Monitored: {', '.join(TARGET_DATES)}")
-    print(f" Topic: https://ntfy.sh/{NTFY_TOPIC}")
+    print(f"🚀 DISTRICT SEAT MONITOR: {MOVIE_TITLE}")
+    print(f"📍 Cinema: {THEATRE_NAME}")
+    print(f"📅 Dates Monitored: {', '.join(TARGET_DATES)}")
+    print(f"🔔 Topic: https://ntfy.sh/{NTFY_TOPIC}")
     print("==================================================")
 
     state = load_state()
@@ -183,7 +193,7 @@ def main():
 
     while (time.time() - start_time) < MAX_RUNTIME_SECONDS:
         print(f"\n==================================================")
-        print(f" CYCLE {cycle_count} @ {datetime.now().strftime('%H:%M:%S')}")
+        print(f"🔄 CYCLE {cycle_count} @ {datetime.now().strftime('%H:%M:%S')}")
         print(f"==================================================")
 
         deltas = {}
@@ -222,10 +232,10 @@ def main():
                         "price": price
                     }
 
-                status_badge = " SOLD OUT" if current_total == 0 else f" {current_total} LEFT"
+                status_badge = "🔴 SOLD OUT" if current_total == 0 else f"🟢 {current_total} LEFT"
                 print(f"\n[{index}/{len(shows)}] {audi_name} @ {show_time_str} IST [{status_badge}]")
                 for cat, cdata in categories.items():
-                    print(f"       • {cat:<22} (Rs.{cdata['price']}): {cdata['available']}/{cdata['total']} left")
+                    print(f"       • {cat:<22} (₹{cdata['price']}): {cdata['available']}/{cdata['total']} left")
 
                 if s_id not in state:
                     state[s_id] = {
@@ -251,9 +261,9 @@ def main():
                         unblocked_details.append(f"{cat_name} (+{diff})")
 
                 if newly_unblocked_count > 0 and not is_first_run:
-                    print(f"    ->  UNBLOCKS DETECTED: +{newly_unblocked_count} new seats in {audi_name} @ {show_time_str} ({target_date})!")
+                    print(f"    -> 🟢 UNBLOCKS DETECTED: +{newly_unblocked_count} new seats in {audi_name} @ {show_time_str} ({target_date})!")
                     details_str = ", ".join(unblocked_details)
-                    breakdown_lines = [f"• {cat} (Rs.{d['price']}): {d['available']} available" for cat, d in categories.items()]
+                    breakdown_lines = [f"• {cat} (₹{d['price']}): {d['available']} available" for cat, d in categories.items()]
 
                     safe_title = f"[{target_date} {show_time_str}] {newly_unblocked_count} SEATS OPEN: {audi_name}"
                     msg = (
@@ -280,7 +290,7 @@ def main():
                     deltas[s_id] = state[s_id]
 
                 elif current_total < previous_total:
-                    print(f"    ->  Seats booked. Dropped from {previous_total} down to {current_total}.")
+                    print(f"    -> 🔴 Seats booked. Dropped from {previous_total} down to {current_total}.")
                     state[s_id] = {
                         "date": target_date,
                         "time": show_time_str,
@@ -302,7 +312,7 @@ def main():
                     }
                     if is_first_run:
                         deltas[s_id] = state[s_id]
-                    print("    ->  No changes detected.")
+                    print("    -> ⚪ No changes detected.")
 
         if is_first_run or deltas:
             print(f"\n[STATE] Syncing state baseline to {STATE_FILE}...")
@@ -316,7 +326,7 @@ def main():
         cycle_count += 1
         time.sleep(CHECK_INTERVAL_SECONDS)
 
-    print("\nTime limit reached (5h 55m). Gracefully shutting down.")
+    print("\n🏁 Time limit reached (5h 55m). Gracefully shutting down.")
 
 if __name__ == "__main__":
     main()
