@@ -1,1 +1,292 @@
-{}
+{
+  "34956__1787365800__5842__6541": {
+    "date": "2026-08-22",
+    "time": "08:00 AM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 0,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 0,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 0,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 0,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787378400__5842__6542": {
+    "date": "2026-08-22",
+    "time": "11:30 AM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 0,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 0,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 0,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 0,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787390700__5842__6543": {
+    "date": "2026-08-22",
+    "time": "02:55 PM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 0,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 0,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 0,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 0,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787405100__5842__6544": {
+    "date": "2026-08-22",
+    "time": "06:55 PM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 0,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 0,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 0,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 0,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787418000__5842__6545": {
+    "date": "2026-08-22",
+    "time": "10:30 PM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 0,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 0,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 0,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 0,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787452200__5842__6548": {
+    "date": "2026-08-23",
+    "time": "08:00 AM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 84,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 25,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 13,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 46,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787464800__5842__6549": {
+    "date": "2026-08-23",
+    "time": "11:30 AM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 12,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 11,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 0,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 1,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787477100__5842__6550": {
+    "date": "2026-08-23",
+    "time": "02:55 PM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 1,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 0,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 0,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 1,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787491500__5842__6551": {
+    "date": "2026-08-23",
+    "time": "06:55 PM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 17,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 14,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 1,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 2,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  },
+  "34956__1787504400__5842__6552": {
+    "date": "2026-08-23",
+    "time": "10:30 PM",
+    "audi": "VIMAL 70MM",
+    "theatre": "Vimal 70MM",
+    "total": 46,
+    "categories": {
+      "EXECUTIVE": {
+        "available": 3,
+        "total": 144,
+        "price": 50
+      },
+      "SILVER": {
+        "available": 14,
+        "total": 173,
+        "price": 125
+      },
+      "GOLD": {
+        "available": 29,
+        "total": 502,
+        "price": 175
+      },
+      "PLATINUM(RECLINERS)": {
+        "available": 0,
+        "total": 26,
+        "price": 235
+      }
+    }
+  }
+}
