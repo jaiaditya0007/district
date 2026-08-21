@@ -2,9 +2,8 @@ name: District Vimal 70MM Seat Monitor
 
 on:
   schedule:
-    # Runs continuously every 6 hours
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+  workflow_dispatch:
 
 concurrency:
   group: vimal-monitor
@@ -26,12 +25,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          run: pip install requests curl-cffi typing_extensions
           pip install curl_cffi beautifulsoup4 requests
 
       - name: Configure Git for State Auto-Sync
@@ -40,4 +37,4 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run District Monitor Loop
-        run: python district.py
+        run: python district_vimal.py
