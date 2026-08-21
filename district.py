@@ -15,31 +15,19 @@ MOVIE_TITLE = "Irumudi"
 THEATRE_NAME = "Vimal 70MM"
 
 STATE_FILE = "district.json"
-NTFY_TOPIC = "alusdolby"
+NTFY_TOPIC = "districti"
 CHECK_INTERVAL_SECONDS = 15
 MAX_RUNTIME_SECONDS = (5 * 3600) + (55 * 60)  # 5 hours 55 minutes
 
 IST_OFFSET = timedelta(hours=5, minutes=30)
 
-# Minimal clean headers - let curl_cffi construct authentic TLS/HTTP2 frames natively
-MINIMAL_HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.district.in/",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache"
 }
-
-# Persistent session to retain Cloudflare cookies across polling cycles
-CFFI_SESSION = None
-
-def get_session(impersonate_target="chrome124"):
-    global CFFI_SESSION
-    if CFFI_SESSION is None:
-        CFFI_SESSION = cffi_requests.Session(impersonate=impersonate_target)
-    return CFFI_SESSION
-
-def reset_session():
-    global CFFI_SESSION
-    CFFI_SESSION = None
 
 def quiet_git_pull():
     subprocess.run(["git", "fetch", "origin", "main"], capture_output=True, check=False)
@@ -89,10 +77,10 @@ def save_state(deltas, commit_msg="Update District target show state"):
                 print(f"[GIT] Push attempt {attempt+1} failed. Retrying merge...")
                 time.sleep(2)
         else:
-            print("[GIT] Merged state is identical to remote. Nothing to push.")
+            print("[GIT] Merged state is identical. Nothing to push.")
             return latest_state
 
-    print("[GIT] Failed to push after 3 attempts.")
+    print("[GIT] Failed to push state after 3 attempts.")
     return latest_state
 
 def trigger_ntfy(title_ascii, message, click_url):
@@ -134,72 +122,59 @@ def build_direct_booking_url(session, target_date):
             f"encsessionid={enc_sid}&fromdate={target_date}&freeseating=false"
             f"&fromsessions=true&type=CINEMAS&contentid={cid}"
         )
-    return f"https://www.district.in/movies/vimal-cinema-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
+    return f"https://www.district.in/movies/theatre-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
 
 def fetch_sessions_for_date(target_date):
     """Extracts all Irumudi sessions for a specific date from District SSR payload."""
-    url = f"https://www.district.in/movies/vimal-cinema-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
-    
-    # Try with primary impersonation, rotate if Cloudflare triggers 403
-    for browser in ["chrome124", "chrome119", "safari17_0", "edge101"]:
-        try:
-            sess = get_session(browser)
-            resp = sess.get(url, headers=MINIMAL_HEADERS, timeout=15)
-            
-            if resp.status_code == 403:
-                reset_session()
-                continue
+    url = f"https://www.district.in/movies/theatre-in-vizag-CD{CINEMA_ID}?fromdate={target_date}"
+    try:
+        resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome", timeout=15)
+        if resp.status_code != 200:
+            print(f"    -> [{target_date}] HTTP Error: {resp.status_code}")
+            return []
 
-            if resp.status_code != 200:
-                print(f"    -> [{target_date}] HTTP Error: {resp.status_code}")
-                return []
+        soup = BeautifulSoup(resp.text, "html.parser")
+        script_tag = soup.find("script", id="__NEXT_DATA__")
+        if not script_tag:
+            return []
 
-            soup = BeautifulSoup(resp.text, "html.parser")
-            script_tag = soup.find("script", id="__NEXT_DATA__")
-            if not script_tag:
-                return []
+        data = json.loads(script_tag.string)
+        movies_state = data.get("props", {}).get("pageProps", {}).get("initialState", {}).get("movies", {})
+        cinema_sessions = movies_state.get("cinemaSessions", {})
 
-            data = json.loads(script_tag.string)
-            movies_state = data.get("props", {}).get("pageProps", {}).get("initialState", {}).get("movies", {})
-            cinema_sessions = movies_state.get("cinemaSessions", {})
+        irumudi_sessions = []
+        for date_key, cinema_data in cinema_sessions.items():
+            theatre_label = cinema_data.get("cinemaName") or THEATRE_NAME
+            for m in cinema_data.get("arrangedSessions", []):
+                code = m.get("contentId") or m.get("entityCode")
+                name = str(m.get("entityName") or m.get("label") or "").lower()
 
-            irumudi_sessions = []
-            for date_key, cinema_data in cinema_sessions.items():
-                theatre_label = cinema_data.get("cinemaName") or THEATRE_NAME
-                for m in cinema_data.get("arrangedSessions", []):
-                    code = m.get("contentId") or m.get("entityCode")
-                    name = str(m.get("entityName") or m.get("label") or "").lower()
+                if code == TARGET_CONTENT_ID or str(code) == str(TARGET_CONTENT_ID) or "irumudi" in name:
+                    for s in m.get("sessions", []):
+                        s["theatreName"] = theatre_label
+                        s["targetDate"] = target_date
+                        irumudi_sessions.append(s)
 
-                    if code == TARGET_CONTENT_ID or str(code) == str(TARGET_CONTENT_ID) or "irumudi" in name:
-                        for s in m.get("sessions", []):
-                            s["theatreName"] = theatre_label
-                            s["targetDate"] = target_date
-                            irumudi_sessions.append(s)
+        # Deduplicate by sid
+        unique = {}
+        for s in irumudi_sessions:
+            sid = s.get("sid")
+            if sid and sid not in unique:
+                unique[sid] = s
 
-            # Deduplicate by sid
-            unique = {}
-            for s in irumudi_sessions:
-                sid = s.get("sid")
-                if sid and sid not in unique:
-                    unique[sid] = s
-
-            return sorted(unique.values(), key=lambda x: x.get("showTime", ""))
-
-        except Exception as e:
-            reset_session()
-            continue
-
-    print(f"    -> [{target_date}] Failed after trying all browser profiles.")
-    return []
+        return sorted(unique.values(), key=lambda x: x.get("showTime", ""))
+    except Exception as e:
+        print(f"    -> [{target_date}] Extraction error: {e}")
+        return []
 
 def main():
     start_time = time.time()
 
     print("==================================================")
-    print(f"🚀 DISTRICT SEAT MONITOR: {MOVIE_TITLE}")
-    print(f"📍 Cinema: {THEATRE_NAME}")
-    print(f"📅 Dates Monitored: {', '.join(TARGET_DATES)}")
-    print(f"🔔 Topic: https://ntfy.sh/{NTFY_TOPIC}")
+    print(f" DISTRICT SEAT MONITOR: {MOVIE_TITLE}")
+    print(f" Cinema: {THEATRE_NAME}")
+    print(f" Dates Monitored: {', '.join(TARGET_DATES)}")
+    print(f" Topic: https://ntfy.sh/{NTFY_TOPIC}")
     print("==================================================")
 
     state = load_state()
@@ -208,7 +183,7 @@ def main():
 
     while (time.time() - start_time) < MAX_RUNTIME_SECONDS:
         print(f"\n==================================================")
-        print(f"🔄 CYCLE {cycle_count} @ {datetime.now().strftime('%H:%M:%S')}")
+        print(f" CYCLE {cycle_count} @ {datetime.now().strftime('%H:%M:%S')}")
         print(f"==================================================")
 
         deltas = {}
@@ -247,10 +222,10 @@ def main():
                         "price": price
                     }
 
-                status_badge = "🔴 SOLD OUT" if current_total == 0 else f"🟢 {current_total} LEFT"
+                status_badge = " SOLD OUT" if current_total == 0 else f" {current_total} LEFT"
                 print(f"\n[{index}/{len(shows)}] {audi_name} @ {show_time_str} IST [{status_badge}]")
                 for cat, cdata in categories.items():
-                    print(f"       • {cat:<22} (₹{cdata['price']}): {cdata['available']}/{cdata['total']} left")
+                    print(f"       • {cat:<22} (Rs.{cdata['price']}): {cdata['available']}/{cdata['total']} left")
 
                 if s_id not in state:
                     state[s_id] = {
@@ -276,9 +251,9 @@ def main():
                         unblocked_details.append(f"{cat_name} (+{diff})")
 
                 if newly_unblocked_count > 0 and not is_first_run:
-                    print(f"    -> 🟢 UNBLOCKS DETECTED: +{newly_unblocked_count} new seats in {audi_name} @ {show_time_str} ({target_date})!")
+                    print(f"    ->  UNBLOCKS DETECTED: +{newly_unblocked_count} new seats in {audi_name} @ {show_time_str} ({target_date})!")
                     details_str = ", ".join(unblocked_details)
-                    breakdown_lines = [f"• {cat} (₹{d['price']}): {d['available']} available" for cat, d in categories.items()]
+                    breakdown_lines = [f"• {cat} (Rs.{d['price']}): {d['available']} available" for cat, d in categories.items()]
 
                     safe_title = f"[{target_date} {show_time_str}] {newly_unblocked_count} SEATS OPEN: {audi_name}"
                     msg = (
@@ -305,7 +280,7 @@ def main():
                     deltas[s_id] = state[s_id]
 
                 elif current_total < previous_total:
-                    print(f"    -> 🔴 Seats booked. Dropped from {previous_total} down to {current_total}.")
+                    print(f"    ->  Seats booked. Dropped from {previous_total} down to {current_total}.")
                     state[s_id] = {
                         "date": target_date,
                         "time": show_time_str,
@@ -327,7 +302,7 @@ def main():
                     }
                     if is_first_run:
                         deltas[s_id] = state[s_id]
-                    print("    -> ⚪ No changes detected.")
+                    print("    ->  No changes detected.")
 
         if is_first_run or deltas:
             print(f"\n[STATE] Syncing state baseline to {STATE_FILE}...")
@@ -341,7 +316,7 @@ def main():
         cycle_count += 1
         time.sleep(CHECK_INTERVAL_SECONDS)
 
-    print("\n🏁 Time limit reached (5h 55m). Gracefully shutting down.")
+    print("\nTime limit reached (5h 55m). Gracefully shutting down.")
 
 if __name__ == "__main__":
     main()
