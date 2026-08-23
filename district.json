@@ -174,11 +174,11 @@
     }
   },
   "34956__1787464800__5842__6549": {
-    "date": "2026-08-23",
+    "date": "2026-08-22",
     "time": "11:30 AM",
     "audi": "VIMAL 70MM",
     "theatre": "Vimal 70MM",
-    "total": 9,
+    "total": 0,
     "categories": {
       "EXECUTIVE": {
         "available": 0,
@@ -191,7 +191,7 @@
         "price": 125
       },
       "GOLD": {
-        "available": 9,
+        "available": 0,
         "total": 502,
         "price": 175
       },
