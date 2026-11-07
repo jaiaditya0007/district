@@ -3,6 +3,8 @@ import json
 import time
 import subprocess
 import requests
+import random
+import shutil
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from curl_cffi import requests as cffi_requests
@@ -27,6 +29,21 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
     "Cache-Control": "no-cache",
     "Pragma": "no-cache"
+}
+
+# --- PROXY CONFIGURATION ---
+PROXY_POOL = []
+raw_proxies = os.environ.get("PROXY_LIST", "").strip()
+if raw_proxies:
+    for line in raw_proxies.split("\n"):
+        parts = line.strip().split(":")
+        if len(parts) == 4:
+            ip, port, user, pwd = parts
+            PROXY_POOL.append(f"http://{user}:{pwd}@{ip}:{port}")
+
+PROXIES = {
+    "http": "socks5://127.0.0.1:40000",
+    "https": "socks5://127.0.0.1:40000"
 }
 
 def quiet_git_pull():
@@ -79,7 +96,6 @@ def save_state(deltas, commit_msg="Update District target show state"):
         else:
             print("[GIT] Merged state is identical. Nothing to push.")
             return latest_state
-
     print("[GIT] Failed to push state after 3 attempts.")
     return latest_state
 
@@ -99,7 +115,7 @@ def trigger_ntfy(title_ascii, message, click_url):
             data=message.encode('utf-8'),
             headers=headers,
             timeout=10,
-            proxies={"http": None, "https": None}
+            proxies={"http": None, "https": None} # Bypass WARP for ntfy to prevent latency
         )
         print(f"    -> Ntfy notification sent! Status: {resp.status_code}")
     except Exception as e:
@@ -125,13 +141,57 @@ def build_direct_booking_url(session, target_date):
         )
     return f"https://www.district.in/movies/theatre-CD{CINEMA_ID}?fromdate={target_date}"
 
-def fetch_sessions_for_date(target_date):
+def start_warp():
+    """Starts local Cloudflare WARP if running locally or configured on runner."""
+    if shutil.which("warp-cli") is None:
+        print("    -> 'warp-cli' not found. Relying on PROXY_LIST or direct connection.")
+        return
+    try:
+        subprocess.run(["warp-cli", "--accept-tos", "connect"], capture_output=True, check=False)
+        time.sleep(3)
+        print("    -> 🛡️ Cloudflare WARP Proxy Connected.")
+    except Exception as e:
+        print(f"    -> ⚠️ WARP bypass notice: {e}")
+
+def make_bms_request(method, url, network_state, max_retries=5, **kwargs):
+    for attempt in range(1, max_retries + 1):
+        current_proxies = None
+        if network_state["state"] == 1:
+            current_proxies = PROXIES
+        elif network_state["state"] == 2:
+            if not network_state.get("pool_proxy") and PROXY_POOL:
+                proxy_url = random.choice(PROXY_POOL)
+                network_state["pool_proxy"] = {"http": proxy_url, "https": proxy_url}
+            current_proxies = network_state.get("pool_proxy")
+
+        try:
+            if method.upper() == 'GET':
+                resp = cffi_requests.get(url, proxies=current_proxies, impersonate="chrome", timeout=15, **kwargs)
+            else:
+                resp = cffi_requests.post(url, proxies=current_proxies, impersonate="chrome", timeout=15, **kwargs)
+            
+            if resp.status_code in [429, 403]:
+                if attempt < max_retries:
+                    max_states = network_state.get("max_states", 3)
+                    network_state["state"] = (network_state["state"] + 1) % max_states
+                    if network_state["state"] == 2:
+                        network_state["pool_proxy"] = None
+                    time.sleep(2)
+                    continue
+            return resp
+        except Exception:
+            if attempt < max_retries:
+                time.sleep(2)
+                continue
+    return None
+
+def fetch_sessions_for_date(target_date, network_state):
     """Extracts all target sessions for a specific date from District SSR payload."""
     url = f"https://www.district.in/movies/theatre-CD{CINEMA_ID}?fromdate={target_date}"
     try:
-        resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome", timeout=15)
-        if resp.status_code != 200:
-            print(f"    -> [{target_date}] HTTP Error: {resp.status_code}")
+        resp = make_bms_request("GET", url, network_state, headers=HEADERS)
+        if not resp or resp.status_code != 200:
+            print(f"    -> [{target_date}] HTTP Error: {resp.status_code if resp else 'Connection Failed'}")
             return []
 
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -182,9 +242,13 @@ def main():
     print(f" Topic: https://ntfy.sh/{NTFY_TOPIC}")
     print("==================================================")
 
+    start_warp()
     state = load_state()
     is_first_run = len(state) == 0
     cycle_count = 1
+    
+    # State tracker for proxy rotation
+    network_state = {"state": 1, "pool_proxy": None, "max_states": 3}
 
     while (time.time() - start_time) < MAX_RUNTIME_SECONDS:
         print(f"\n==================================================")
@@ -195,7 +259,7 @@ def main():
         all_shows_count = 0
 
         for target_date in TARGET_DATES:
-            shows = fetch_sessions_for_date(target_date)
+            shows = fetch_sessions_for_date(target_date, network_state)
             all_shows_count += len(shows)
 
             if not shows:
