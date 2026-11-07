@@ -15,7 +15,7 @@ MOVIE_TITLE = "SCENE"
 THEATRE_NAME = "AAA Vizag"
 
 STATE_FILE = "district_aaa_scene.json"
-NTFY_TOPIC = "alusdolby"
+NTFY_TOPIC = "aaav"
 CHECK_INTERVAL_SECONDS = 15
 MAX_RUNTIME_SECONDS = (5 * 3600) + (55 * 60)  # 5 hours 55 minutes
 
