@@ -4,10 +4,10 @@
     "time": "07:00 PM",
     "audi": "SCREEN 8",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 0,
+    "total": 9,
     "categories": {
       "SEMI RECLINER": {
-        "available": 0,
+        "available": 9,
         "total": 34,
         "price": 295
       }
