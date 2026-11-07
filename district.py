@@ -9,12 +9,12 @@ from curl_cffi import requests as cffi_requests
 
 # --- TARGET SHOW CONFIGURATION ---
 CINEMA_ID = "1102411"  # AAA Vizag
-TARGET_DATES = ["2026-11-07", "2026-11-08"]  # Today & Tomorrow
-TARGET_CONTENT_ID = 233181
-MOVIE_TITLE = "SCENE"
-THEATRE_NAME = "AAA Vizag"
+TARGET_DATES = ["2026-11-07", "2026-11-08"]
+TARGET_CONTENT_ID = "176276"
+MOVIE_TITLE = "Ramayana"
+THEATRE_NAME = "AAA Vizag (Screens 7 & 8)"
 
-STATE_FILE = "district_aaa_scene.json"
+STATE_FILE = "district_aaa_ramayana.json"
 NTFY_TOPIC = "aaav"
 CHECK_INTERVAL_SECONDS = 15
 MAX_RUNTIME_SECONDS = (5 * 3600) + (55 * 60)  # 5 hours 55 minutes
@@ -98,7 +98,8 @@ def trigger_ntfy(title_ascii, message, click_url):
             f"https://ntfy.sh/{NTFY_TOPIC}",
             data=message.encode('utf-8'),
             headers=headers,
-            timeout=10
+            timeout=10,
+            proxies={"http": None, "https": None}
         )
         print(f"    -> Ntfy notification sent! Status: {resp.status_code}")
     except Exception as e:
@@ -122,11 +123,11 @@ def build_direct_booking_url(session, target_date):
             f"encsessionid={enc_sid}&fromdate={target_date}&freeseating=false"
             f"&fromsessions=true&type=CINEMAS&contentid={cid}"
         )
-    return f"https://www.district.in/movies/cinema-CD{CINEMA_ID}?fromdate={target_date}"
+    return f"https://www.district.in/movies/theatre-CD{CINEMA_ID}?fromdate={target_date}"
 
 def fetch_sessions_for_date(target_date):
     """Extracts all target sessions for a specific date from District SSR payload."""
-    url = f"https://www.district.in/movies/cinema-CD{CINEMA_ID}?fromdate={target_date}"
+    url = f"https://www.district.in/movies/theatre-CD{CINEMA_ID}?fromdate={target_date}"
     try:
         resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome", timeout=15)
         if resp.status_code != 200:
@@ -145,15 +146,19 @@ def fetch_sessions_for_date(target_date):
         target_sessions = []
         for date_key, cinema_data in cinema_sessions.items():
             theatre_label = cinema_data.get("cinemaName") or THEATRE_NAME
+            
             for m in cinema_data.get("arrangedSessions", []):
-                code = m.get("contentId") or m.get("entityCode")
-                name = str(m.get("entityName") or m.get("label") or "").lower()
+                code = str(m.get("contentId") or m.get("entityCode") or "")
+                name = str(m.get("entityName") or m.get("label") or "")
 
-                if str(code) == str(TARGET_CONTENT_ID) or MOVIE_TITLE.lower() in name:
+                if code == str(TARGET_CONTENT_ID) or MOVIE_TITLE.lower() in name.lower():
                     for s in m.get("sessions", []):
-                        s["theatreName"] = theatre_label
-                        s["targetDate"] = target_date
-                        target_sessions.append(s)
+                        audi_name = s.get("audi", "").upper()
+                        # Strict filter for Screen 7 and Screen 8 only
+                        if "SCREEN 7" in audi_name or "SCREEN 8" in audi_name:
+                            s["theatreName"] = theatre_label
+                            s["targetDate"] = target_date
+                            target_sessions.append(s)
 
         # Deduplicate by sid
         unique = {}
@@ -194,7 +199,7 @@ def main():
             all_shows_count += len(shows)
 
             if not shows:
-                print(f"[{target_date}] No active sessions found.")
+                print(f"[{target_date}] No active Screen 7/8 sessions found.")
                 continue
 
             print(f"\n--- {target_date} ({len(shows)} show(s) found) ---")
@@ -203,7 +208,7 @@ def main():
                 s_id = session.get("sid")
                 raw_time = session.get("showTime", target_date)
                 show_time_str = format_show_time_ist(raw_time)
-                audi_name = session.get("audi", THEATRE_NAME)
+                audi_name = session.get("audi", THEATRE_NAME).upper()
                 theatre_name = session.get("theatreName", THEATRE_NAME)
                 booking_url = build_direct_booking_url(session, target_date)
 
@@ -306,7 +311,7 @@ def main():
 
         if is_first_run or deltas:
             print(f"\n[STATE] Syncing state baseline to {STATE_FILE}...")
-            state = save_state(deltas if deltas else state, f"AAA Vizag update cycle {cycle_count}")
+            state = save_state(deltas if deltas else state, f"AAA Vizag Screens 7&8 update cycle {cycle_count}")
             if is_first_run:
                 is_first_run = False
                 print(f"[STATE] Initial baseline established for all {all_shows_count} shows across target dates!")
