@@ -37,10 +37,10 @@
     "time": "10:45 PM",
     "audi": "SCREEN 8",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 0,
+    "total": 1,
     "categories": {
       "SEMI RECLINER": {
-        "available": 0,
+        "available": 1,
         "total": 34,
         "price": 295
       }
@@ -51,10 +51,10 @@
     "time": "10:55 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 1,
+    "total": 0,
     "categories": {
       "PLATINUM": {
-        "available": 1,
+        "available": 0,
         "total": 475,
         "price": 177
       },
