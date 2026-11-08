@@ -174,38 +174,38 @@
     "time": "03:15 PM",
     "audi": "SCREEN 8",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 2,
+    "total": 0,
     "categories": {
       "SEMI RECLINER": {
-        "available": 2,
+        "available": 0,
         "total": 34,
         "price": 295
       }
     }
   },
   "35344__1794144600__8__5480": {
-    "date": "2026-11-07",
+    "date": "2026-11-08",
     "time": "07:00 PM",
     "audi": "SCREEN 8",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 11,
+    "total": 19,
     "categories": {
       "SEMI RECLINER": {
-        "available": 11,
+        "available": 19,
         "total": 34,
         "price": 295
       }
     }
   },
   "35344__1794158100__8__5481": {
-    "date": "2026-11-08",
+    "date": "2026-11-07",
     "time": "10:45 PM",
     "audi": "SCREEN 8",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 18,
+    "total": 8,
     "categories": {
       "SEMI RECLINER": {
-        "available": 18,
+        "available": 8,
         "total": 34,
         "price": 295
       }
