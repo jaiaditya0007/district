@@ -198,14 +198,14 @@
     }
   },
   "35344__1794158100__8__5481": {
-    "date": "2026-11-07",
+    "date": "2026-11-08",
     "time": "10:45 PM",
     "audi": "SCREEN 8",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 2,
+    "total": 0,
     "categories": {
       "SEMI RECLINER": {
-        "available": 2,
+        "available": 0,
         "total": 34,
         "price": 295
       }
