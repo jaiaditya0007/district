@@ -151,14 +151,14 @@
     }
   },
   "35344__1794158700__7__4974": {
-    "date": "2026-11-08",
+    "date": "2026-11-07",
     "time": "10:55 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 1,
+    "total": 0,
     "categories": {
       "PLATINUM": {
-        "available": 1,
+        "available": 0,
         "total": 475,
         "price": 177
       },
@@ -202,10 +202,10 @@
     "time": "10:45 PM",
     "audi": "SCREEN 8",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 1,
+    "total": 2,
     "categories": {
       "SEMI RECLINER": {
-        "available": 1,
+        "available": 2,
         "total": 34,
         "price": 295
       }
