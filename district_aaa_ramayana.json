@@ -368,10 +368,10 @@
     "time": "08:35 AM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 188,
+    "total": 190,
     "categories": {
       "PLATINUM": {
-        "available": 188,
+        "available": 190,
         "total": 475,
         "price": 177
       },
