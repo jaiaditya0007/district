@@ -352,12 +352,12 @@
     "total": 6,
     "categories": {
       "PLATINUM": {
-        "available": 4,
+        "available": 6,
         "total": 475,
         "price": 177
       },
       "RECLINER": {
-        "available": 2,
+        "available": 0,
         "total": 20,
         "price": 295
       }
