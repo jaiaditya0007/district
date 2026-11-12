@@ -501,15 +501,15 @@
     "time": "10:50 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 98,
+    "total": 100,
     "categories": {
       "PLATINUM": {
-        "available": 96,
+        "available": 87,
         "total": 475,
         "price": 177
       },
       "RECLINER": {
-        "available": 2,
+        "available": 13,
         "total": 20,
         "price": 295
       }
