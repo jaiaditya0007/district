@@ -504,12 +504,12 @@
     "total": 77,
     "categories": {
       "PLATINUM": {
-        "available": 77,
+        "available": 76,
         "total": 475,
         "price": 177
       },
       "RECLINER": {
-        "available": 0,
+        "available": 1,
         "total": 20,
         "price": 295
       }
