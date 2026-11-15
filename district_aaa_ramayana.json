@@ -691,15 +691,15 @@
     "time": "12:40 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 45,
+    "total": 9,
     "categories": {
       "PLATINUM": {
-        "available": 45,
+        "available": 8,
         "total": 475,
         "price": 177
       },
       "RECLINER": {
-        "available": 0,
+        "available": 1,
         "total": 20,
         "price": 295
       }
@@ -710,10 +710,10 @@
     "time": "04:20 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 44,
+    "total": 0,
     "categories": {
       "PLATINUM": {
-        "available": 44,
+        "available": 0,
         "total": 475,
         "price": 177
       },
@@ -729,10 +729,10 @@
     "time": "10:35 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 332,
+    "total": 202,
     "categories": {
       "PLATINUM": {
-        "available": 332,
+        "available": 202,
         "total": 475,
         "price": 177
       },
