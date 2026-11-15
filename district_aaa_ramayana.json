@@ -687,19 +687,19 @@
     }
   },
   "35344__1794726600__7__5966": {
-    "date": "2026-11-08",
+    "date": "2026-11-07",
     "time": "12:40 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 7,
+    "total": 13,
     "categories": {
       "PLATINUM": {
-        "available": 7,
+        "available": 12,
         "total": 475,
         "price": 177
       },
       "RECLINER": {
-        "available": 0,
+        "available": 1,
         "total": 20,
         "price": 295
       }
@@ -729,10 +729,10 @@
     "time": "10:35 PM",
     "audi": "SCREEN 7",
     "theatre": "AAA Vizag (Screens 7 & 8)",
-    "total": 189,
+    "total": 192,
     "categories": {
       "PLATINUM": {
-        "available": 189,
+        "available": 192,
         "total": 475,
         "price": 177
       },
